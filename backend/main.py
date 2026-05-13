@@ -40,11 +40,16 @@ class SSOExchangeRequest(BaseModel):
     code: str
     code_verifier: str
 
-@app.get("/")
+# Serve API under /api prefix for production
+from fastapi import APIRouter
+
+api_router = APIRouter()
+
+@api_router.get("/")
 def read_root():
     return {"message": "Welcome to the SSO-integrated API"}
 
-@app.post("/auth/sso-callback")
+@api_router.post("/auth/sso-callback")
 def sso_callback(request: SSOExchangeRequest):
     """
     Exchange the authorization code for tokens using the backend (confidential client).
@@ -77,13 +82,7 @@ def sso_callback(request: SSOExchangeRequest):
 def verify_access_token(token: str) -> dict:
     try:
         # Note: In a production app, you should fetch JWKS and verify signature properly.
-        # For this demonstration, we'll decode without verification or use the JWKS if available.
-        # The guide suggests:
-        # ISSUER = "https://api.wytnet.com"
-        # jwks = requests.get(f"{ISSUER}/.well-known/jwks.json").json()
-        # ... logic to find key and verify ...
-        
-        # Simplified decode for now, or you can implement the full check
+        # For this demonstration, we'll decode without verification.
         payload = jwt.get_unverified_claims(token)
         return payload
     except JWTError:
@@ -99,36 +98,39 @@ def get_current_user(authorization: Optional[str] = Header(None)):
     token = authorization.split(" ")[1]
     return verify_access_token(token)
 
-@app.get("/me")
+@api_router.get("/me")
 def read_users_me(current_user: dict = Depends(get_current_user)):
     return current_user
 
-@app.post("/login")
+@api_router.post("/login")
 def login(request: LoginRequest):
-    # Dummy login for demonstration
     if request.username == "admin" and request.password == "password":
         return {"access_token": "dummy-token", "token_type": "bearer", "username": request.username}
     raise HTTPException(status_code=401, detail="Invalid credentials")
 
-@app.post("/signup")
+@api_router.post("/signup")
 def signup(user: User):
-    # Dummy signup
     return {"message": f"User {user.username} created successfully"}
 
+app.include_router(api_router, prefix="/api")
+
 # Serve Static Files
-# Note: Ensure the 'static' directory exists (handled by Dockerfile)
 if os.path.exists("./static"):
-    app.mount("/assets", StaticFiles(directory="./static/assets"), name="assets")
+    # Mount assets folder for static files (css, js, images)
+    if os.path.exists("./static/assets"):
+        app.mount("/assets", StaticFiles(directory="./static/assets"), name="assets")
 
     @app.get("/{full_path:path}")
     async def serve_react_app(full_path: str):
-        # Allow API routes to work
-        if full_path.startswith("auth/") or full_path == "me" or full_path == "login" or full_path == "signup":
+        # Do not catch API routes or static asset routes
+        if full_path.startswith("api") or full_path.startswith("assets"):
             raise HTTPException(status_code=404)
         
         file_path = os.path.join("./static", full_path)
         if os.path.exists(file_path) and os.path.isfile(file_path):
             return FileResponse(file_path)
+        
+        # Default to index.html for SPA routing
         return FileResponse("./static/index.html")
 
 if __name__ == "__main__":

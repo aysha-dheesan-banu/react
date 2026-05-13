@@ -5,6 +5,7 @@ frontend/dist
 .git
 .env
 *.log
-.gitignore
-Dockerfile
-docker-compose.yml
+# Do not ignore Dockerfile or docker-compose.yml if you want Docker to see them in some contexts, 
+# although usually the daemon handles this. But let's be safe.
+# Dockerfile
+# docker-compose.yml
