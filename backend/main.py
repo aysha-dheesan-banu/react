@@ -3,6 +3,8 @@ import requests
 import uvicorn
 from fastapi import FastAPI, Depends, HTTPException, status, Header
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import List, Optional
 from jose import jwt, JWTError
@@ -112,6 +114,22 @@ def login(request: LoginRequest):
 def signup(user: User):
     # Dummy signup
     return {"message": f"User {user.username} created successfully"}
+
+# Serve Static Files
+# Note: Ensure the 'static' directory exists (handled by Dockerfile)
+if os.path.exists("./static"):
+    app.mount("/assets", StaticFiles(directory="./static/assets"), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_react_app(full_path: str):
+        # Allow API routes to work
+        if full_path.startswith("auth/") or full_path == "me" or full_path == "login" or full_path == "signup":
+            raise HTTPException(status_code=404)
+        
+        file_path = os.path.join("./static", full_path)
+        if os.path.exists(file_path) and os.path.isfile(file_path):
+            return FileResponse(file_path)
+        return FileResponse("./static/index.html")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
