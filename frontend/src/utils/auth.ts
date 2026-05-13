@@ -20,7 +20,7 @@ export async function createPKCE() {
 
 export const SSO_CONFIG = {
   clientId: 'client_LjqLvYUDaV826QJNejwxnQ',
-  redirectUri: 'http://localhost:5173/callback',
+  redirectUri: 'https://react.dhilip.in/callback',
   authorizeUrl: 'https://api.wytnet.com/oauth/authorize',
   scope: 'openid profile email',
 };

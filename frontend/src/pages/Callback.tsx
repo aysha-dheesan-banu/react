@@ -31,7 +31,8 @@ const Callback = () => {
 
       try {
         // Send code and verifier to our backend for exchange
-        const response = await fetch('http://localhost:8000/auth/sso-callback', {
+        // Using /api/ prefix which is proxied to the backend in production
+        const response = await fetch('/api/auth/sso-callback', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ code, code_verifier: verifier }),
